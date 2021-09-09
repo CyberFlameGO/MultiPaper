@@ -1,0 +1,81 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: PureGero <puregero@gmail.com>
+Date: Thu, 9 Sep 2021 15:38:08 +1000
+Subject: [PATCH] Reduce villager tick intensity
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/Mob.java b/src/main/java/net/minecraft/world/entity/Mob.java
+index 8a864238e154e2131834d013652746b7e7a78c97..20e6b1814a81c51b5bddf0893a094f5a36cd984a 100644
+--- a/src/main/java/net/minecraft/world/entity/Mob.java
++++ b/src/main/java/net/minecraft/world/entity/Mob.java
+@@ -256,6 +256,7 @@ public abstract class Mob extends LivingEntity {
+     }
+ 
+     public boolean setGoalTarget(LivingEntity entityliving, EntityTargetEvent.TargetReason reason, boolean fireEvent) {
++        if (entityliving != null) entityliving.getBrain().ticks = 0; // MultiPaper - Make the brain run immediately
+         if (this.getTarget() == entityliving) return false;
+         if (fireEvent) {
+             if (reason == EntityTargetEvent.TargetReason.UNKNOWN && this.getTarget() != null && entityliving == null) {
+diff --git a/src/main/java/net/minecraft/world/entity/ai/Brain.java b/src/main/java/net/minecraft/world/entity/ai/Brain.java
+index 75022e5888de2730bb29d1e7535ddc63e2c5f713..23a83bd281bd8a6612877eb8ab4a29103341dc58 100644
+--- a/src/main/java/net/minecraft/world/entity/ai/Brain.java
++++ b/src/main/java/net/minecraft/world/entity/ai/Brain.java
+@@ -76,16 +76,18 @@ public class Brain<E extends LivingEntity> {
+ 
+             @Override
+             public <T> DataResult<Brain<E>> decode(DynamicOps<T> dynamicOps, MapLike<T> mapLike) {
+-                MutableObject<DataResult<Builder<Brain.MemoryValue<?>>>> mutableObject = new MutableObject<>(DataResult.success(ImmutableList.builder()));
++                // MultiPaper start - Decompile error
++                MutableObject<DataResult<Builder<Brain.MemoryValue<?>>>> mutableObjectx = new MutableObject<>(DataResult.success(ImmutableList.builder()));
+                 mapLike.entries().forEach((pair) -> {
+                     DataResult<MemoryModuleType<?>> dataResult = Registry.MEMORY_MODULE_TYPE.parse(dynamicOps, pair.getFirst());
+                     DataResult<? extends Brain.MemoryValue<?>> dataResult2 = dataResult.flatMap((memoryModuleType) -> {
+                         return this.captureRead(memoryModuleType, dynamicOps, (T)pair.getSecond());
+                     });
+-                    mutableObject.setValue(mutableObject.getValue().apply2(Builder::add, dataResult2));
++                    mutableObjectx.setValue(mutableObjectx.getValue().apply2(Builder::add, dataResult2));
+                 });
+-                ImmutableList<Brain.MemoryValue<?>> immutableList = mutableObject.getValue().resultOrPartial(Brain.LOGGER::error).map(Builder::build).orElseGet(ImmutableList::of);
++                ImmutableList<Brain.MemoryValue<?>> immutableList = mutableObjectx.getValue().resultOrPartial(Brain.LOGGER::error).map(Builder::build).orElseGet(ImmutableList::of);
+                 return DataResult.success(new Brain<>(memoryModules, sensors, immutableList, mutableObject::getValue));
++                // MultiPaper end - Decompile error
+             }
+ 
+             private <T, U> DataResult<Brain.MemoryValue<U>> captureRead(MemoryModuleType<U> memoryModuleType, DynamicOps<T> dynamicOps, T object) {
+@@ -174,7 +176,7 @@ public class Brain<E extends LivingEntity> {
+     }
+ 
+     public <U> Optional<U> getMemory(MemoryModuleType<U> type) {
+-        return this.memories.get(type).map(ExpirableValue::getValue);
++        return (Optional<U>) this.memories.get(type).map(ExpirableValue::getValue); // MultiPaper Decompile error
+     }
+ 
+     public <U> long getTimeUntilExpiry(MemoryModuleType<U> type) {
+@@ -366,11 +368,18 @@ public class Brain<E extends LivingEntity> {
+         return brain;
+     }
+ 
++    // MultiPaper start - decrease intensity of villagers
++    public int ticks = (int) (Math.random() * 1000); // Random start value
++    
+     public void tick(ServerLevel world, E entity) {
++        int tickFrequency = (entity.getVehicle() == null ? 2 : 10) * 20; // Run every 2 seconds if 
++        if ((ticks++) % tickFrequency == 0) { // MultiPaper
+         this.forgetOutdatedMemories();
+         this.tickSensors(world, entity);
+         this.startEachNonRunningBehavior(world, entity);
+         this.tickEachRunningBehavior(world, entity);
++        }
++        // MultiPaper end - decrease intensity of villagers
+     }
+ 
+     private void tickSensors(ServerLevel world, E entity) {
+@@ -465,7 +474,7 @@ public class Brain<E extends LivingEntity> {
+         private final Optional<? extends ExpirableValue<U>> value;
+ 
+         static <U> Brain.MemoryValue<U> createUnchecked(MemoryModuleType<U> type, Optional<? extends ExpirableValue<?>> data) {
+-            return new Brain.MemoryValue<>(type, data);
++            return new Brain.MemoryValue(type, data); // MultiPaper Decompile error
+         }
+ 
+         MemoryValue(MemoryModuleType<U> type, Optional<? extends ExpirableValue<U>> data) {
