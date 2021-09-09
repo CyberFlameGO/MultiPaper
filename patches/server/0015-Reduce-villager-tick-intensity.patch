@@ -5,14 +5,14 @@ Subject: [PATCH] Reduce villager tick intensity
 
 
 diff --git a/src/main/java/net/minecraft/world/entity/Mob.java b/src/main/java/net/minecraft/world/entity/Mob.java
-index 8a864238e154e2131834d013652746b7e7a78c97..20e6b1814a81c51b5bddf0893a094f5a36cd984a 100644
+index 8a864238e154e2131834d013652746b7e7a78c97..10de4aed431ac6d839f27ce6122b6706af186a27 100644
 --- a/src/main/java/net/minecraft/world/entity/Mob.java
 +++ b/src/main/java/net/minecraft/world/entity/Mob.java
 @@ -256,6 +256,7 @@ public abstract class Mob extends LivingEntity {
      }
  
      public boolean setGoalTarget(LivingEntity entityliving, EntityTargetEvent.TargetReason reason, boolean fireEvent) {
-+        if (entityliving != null) entityliving.getBrain().ticks = 0; // MultiPaper - Make the brain run immediately
++        if (entityliving != null && entityliving.getBrain() != null) entityliving.getBrain().ticks = 0; // MultiPaper - Make the brain run immediately
          if (this.getTarget() == entityliving) return false;
          if (fireEvent) {
              if (reason == EntityTargetEvent.TargetReason.UNKNOWN && this.getTarget() != null && entityliving == null) {
